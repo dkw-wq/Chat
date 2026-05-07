@@ -1,6 +1,7 @@
 <script setup>
-import { computed, nextTick, onMounted, ref } from "vue";
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from "vue";
 import { useRouter } from "vue-router";
+import MiniProfileCard from "@/components/MiniProfileCard.vue";
 import { getCurrentUser, logoutUser } from "@/api/auth";
 import { listChatMessages, sendChatMessage } from "@/api/chat";
 import { listFriends } from "@/api/friends";
@@ -21,12 +22,48 @@ const draft = ref("");
 const feedback = ref("");
 const loading = ref(true);
 const sending = ref(false);
+const socketStatus = ref("disconnected");
 const messageList = ref(null);
+let socket = null;
+let reconnectTimer = null;
+let pollingTimer = null;
+let shouldReconnect = true;
 
 const friendIdNumber = computed(() => Number(props.friendId));
 
 function isMine(message) {
   return currentUser.value && message.senderId === currentUser.value.id;
+}
+
+function isSocketReady() {
+  return socket && socket.readyState === WebSocket.OPEN;
+}
+
+function websocketUrl() {
+  const protocol = window.location.protocol === "https:" ? "wss" : "ws";
+  return `${protocol}//${window.location.hostname}:8080/ws/chat`;
+}
+
+function belongsToCurrentConversation(message) {
+  if (!currentUser.value || !friend.value) {
+    return false;
+  }
+
+  return (
+    (message.senderId === currentUser.value.id && message.receiverId === friend.value.id)
+    || (message.senderId === friend.value.id && message.receiverId === currentUser.value.id)
+  );
+}
+
+function appendMessage(message) {
+  if (messages.value.some((item) => item.id === message.id)) {
+    return;
+  }
+  if (!belongsToCurrentConversation(message)) {
+    return;
+  }
+  messages.value.push(message);
+  scrollToBottom();
 }
 
 function formatTime(value) {
@@ -51,6 +88,7 @@ async function scrollToBottom() {
 async function loadPage() {
   loading.value = true;
   feedback.value = "";
+  stopMessagePolling();
 
   try {
     currentUser.value = await getCurrentUser();
@@ -64,6 +102,8 @@ async function loadPage() {
 
     messages.value = await listChatMessages(friend.value.id, 100);
     await scrollToBottom();
+    connectWebSocket();
+    startMessagePolling();
   } catch {
     router.replace("/login");
   } finally {
@@ -80,10 +120,17 @@ async function submitMessage() {
   sending.value = true;
   feedback.value = "";
   try {
-    const message = await sendChatMessage(friend.value.id, content);
-    messages.value.push(message);
+    if (isSocketReady()) {
+      socket.send(JSON.stringify({
+        type: "SEND_MESSAGE",
+        receiverId: friend.value.id,
+        content
+      }));
+    } else {
+      const message = await sendChatMessage(friend.value.id, content);
+      appendMessage(message);
+    }
     draft.value = "";
-    await scrollToBottom();
   } catch (error) {
     feedback.value = error.message || "发送失败";
   } finally {
@@ -99,12 +146,107 @@ async function refreshMessages() {
   await scrollToBottom();
 }
 
+async function quietlyRefreshMessages() {
+  if (!friend.value || document.hidden) {
+    return;
+  }
+  try {
+    messages.value = await listChatMessages(friend.value.id, 100);
+    await scrollToBottom();
+  } catch {
+    stopMessagePolling();
+  }
+}
+
+function startMessagePolling() {
+  stopMessagePolling();
+  pollingTimer = window.setInterval(quietlyRefreshMessages, 2000);
+}
+
+function stopMessagePolling() {
+  if (pollingTimer) {
+    window.clearInterval(pollingTimer);
+    pollingTimer = null;
+  }
+}
+
+function connectWebSocket() {
+  if (!currentUser.value) {
+    return;
+  }
+  if (isSocketReady()) {
+    return;
+  }
+
+  closeWebSocket(false);
+  shouldReconnect = true;
+  socketStatus.value = "connecting";
+  socket = new WebSocket(websocketUrl());
+
+  socket.addEventListener("open", () => {
+    socketStatus.value = "connected";
+    feedback.value = "";
+  });
+
+  socket.addEventListener("message", (event) => {
+    const envelope = JSON.parse(event.data);
+    if (envelope.type === "CHAT_MESSAGE") {
+      appendMessage(envelope.payload);
+      return;
+    }
+    if (envelope.type === "ERROR") {
+      feedback.value = envelope.payload?.message || "实时消息处理失败";
+    }
+  });
+
+  socket.addEventListener("close", () => {
+    socketStatus.value = "disconnected";
+    scheduleReconnect();
+  });
+
+  socket.addEventListener("error", () => {
+    socketStatus.value = "disconnected";
+  });
+}
+
+function scheduleReconnect() {
+  if (reconnectTimer || !currentUser.value || !shouldReconnect) {
+    return;
+  }
+
+  reconnectTimer = window.setTimeout(() => {
+    reconnectTimer = null;
+    connectWebSocket();
+  }, 2500);
+}
+
+function closeWebSocket(allowReconnect = false) {
+  shouldReconnect = allowReconnect;
+  if (!allowReconnect && reconnectTimer) {
+    window.clearTimeout(reconnectTimer);
+    reconnectTimer = null;
+  }
+  if (socket) {
+    socket.close();
+    socket = null;
+  }
+}
+
 async function logout() {
+  closeWebSocket();
+  stopMessagePolling();
   await logoutUser();
   router.replace("/login");
 }
 
 onMounted(loadPage);
+
+watch(() => props.friendId, loadPage);
+
+onBeforeUnmount(() => {
+  closeWebSocket();
+  stopMessagePolling();
+});
 </script>
 
 <template>
@@ -129,7 +271,9 @@ onMounted(loadPage);
           :class="{ active: item.id === friendIdNumber }"
           :to="`/chat/${item.id}`"
         >
-          <span class="avatar">{{ item.nickname.slice(0, 1).toUpperCase() }}</span>
+          <MiniProfileCard :user-id="item.id">
+            <img class="avatar image-avatar" :src="item.avatarUrl" alt="">
+          </MiniProfileCard>
           <span>
             <strong>{{ item.nickname }}</strong>
             <small>{{ item.username }}</small>
@@ -142,7 +286,12 @@ onMounted(loadPage);
       <header class="chat-header">
         <div>
           <h2>{{ friend ? friend.nickname : "请选择好友" }}</h2>
-          <p>{{ friend ? friend.username : "从好友列表打开聊天窗口" }}</p>
+          <p>
+            {{ friend ? friend.username : "从好友列表打开聊天窗口" }}
+            <span v-if="friend" class="socket-status" :class="socketStatus">
+              {{ socketStatus === "connected" ? "实时在线" : socketStatus === "connecting" ? "连接中" : "实时离线" }}
+            </span>
+          </p>
         </div>
         <button class="button" type="button" @click="refreshMessages">刷新记录</button>
       </header>

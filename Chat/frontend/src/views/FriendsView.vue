@@ -1,6 +1,7 @@
 <script setup>
 import { computed, onMounted, reactive, ref } from "vue";
 import { useRouter } from "vue-router";
+import MiniProfileCard from "@/components/MiniProfileCard.vue";
 import { getCurrentUser, logoutUser } from "@/api/auth";
 import {
   acceptFriendRequest,
@@ -171,6 +172,7 @@ onMounted(loadPage);
       </div>
       <div class="actions">
         <RouterLink class="button" to="/home">首页</RouterLink>
+        <RouterLink class="button" to="/impressions">好友印象</RouterLink>
         <button class="button" type="button" @click="logout">退出</button>
       </div>
     </header>
@@ -200,7 +202,9 @@ onMounted(loadPage);
 
         <div class="list">
           <article v-for="user in searchResults" :key="user.id" class="list-item">
-            <div class="avatar">{{ user.nickname.slice(0, 1).toUpperCase() }}</div>
+            <MiniProfileCard :user-id="user.id">
+              <img class="avatar image-avatar" :src="user.avatarUrl" alt="">
+            </MiniProfileCard>
             <div>
               <strong>{{ user.nickname }}</strong>
               <p>{{ user.username }} · {{ statusText(user.relationshipStatus) }}</p>
@@ -226,7 +230,9 @@ onMounted(loadPage);
         <div class="list">
           <p v-if="!loading.friends && friends.length === 0" class="empty">暂无好友</p>
           <article v-for="friend in friends" :key="friend.id" class="list-item">
-            <div class="avatar">{{ friend.nickname.slice(0, 1).toUpperCase() }}</div>
+            <MiniProfileCard :user-id="friend.id">
+              <img class="avatar image-avatar" :src="friend.avatarUrl" alt="">
+            </MiniProfileCard>
             <div>
               <strong>{{ friend.nickname }}</strong>
               <p>{{ friend.username }}</p>
