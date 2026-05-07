@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>注册 - 在线聊天系统</title>
+  <link rel="stylesheet" href="/css/auth.css">
+</head>
+<body>
+  <main class="shell">
+    <form class="panel form" id="registerForm">
+      <div>
+        <p class="eyebrow">Create account</p>
+        <h1>注册</h1>
+      </div>
+      <label>
+        <span>用户名</span>
+        <input name="username" autocomplete="username" required minlength="3" maxlength="32">
+      </label>
+      <label>
+        <span>昵称</span>
+        <input name="nickname" autocomplete="nickname" required maxlength="30">
+      </label>
+      <label>
+        <span>密码</span>
+        <input name="password" type="password" autocomplete="new-password" required minlength="6">
+      </label>
+      <p class="message" id="message"></p>
+      <button class="button primary" type="submit">注册</button>
+      <a class="link" href="/login.html">已有账号？去登录</a>
+    </form>
+  </main>
+  <script src="/js/register.js"></script>
+</body>
+</html>

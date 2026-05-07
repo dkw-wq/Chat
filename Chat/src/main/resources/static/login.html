@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>登录 - 在线聊天系统</title>
+  <link rel="stylesheet" href="/css/auth.css">
+</head>
+<body>
+  <main class="shell">
+    <form class="panel form" id="loginForm">
+      <div>
+        <p class="eyebrow">Welcome back</p>
+        <h1>登录</h1>
+      </div>
+      <label>
+        <span>用户名</span>
+        <input name="username" autocomplete="username" required>
+      </label>
+      <label>
+        <span>密码</span>
+        <input name="password" type="password" autocomplete="current-password" required>
+      </label>
+      <p class="message" id="message"></p>
+      <button class="button primary" type="submit">登录</button>
+      <a class="link" href="/register.html">还没有账号？去注册</a>
+    </form>
+  </main>
+  <script src="/js/login.js"></script>
+</body>
+</html>
