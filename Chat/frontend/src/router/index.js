@@ -1,4 +1,5 @@
 import { createRouter, createWebHistory } from "vue-router";
+import ChatView from "@/views/ChatView.vue";
 import FriendsView from "@/views/FriendsView.vue";
 import HomeView from "@/views/HomeView.vue";
 import LoginView from "@/views/LoginView.vue";
@@ -32,6 +33,12 @@ const router = createRouter({
       path: "/friends",
       name: "friends",
       component: FriendsView
+    },
+    {
+      path: "/chat/:friendId",
+      name: "chat",
+      component: ChatView,
+      props: true
     }
   ]
 });

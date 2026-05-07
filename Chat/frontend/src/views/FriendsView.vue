@@ -231,7 +231,10 @@ onMounted(loadPage);
               <strong>{{ friend.nickname }}</strong>
               <p>{{ friend.username }}</p>
             </div>
-            <button class="button" type="button" @click="removeFriend(friend)">删除</button>
+            <div class="actions">
+              <RouterLink class="button primary" :to="`/chat/${friend.id}`">聊天</RouterLink>
+              <button class="button" type="button" @click="removeFriend(friend)">删除</button>
+            </div>
           </article>
         </div>
       </section>
