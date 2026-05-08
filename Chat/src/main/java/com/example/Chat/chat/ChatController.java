@@ -21,9 +21,11 @@ import org.springframework.web.bind.annotation.RestController;
 public class ChatController {
 
     private final ChatService chatService;
+    private final ChatMessageBroadcaster chatMessageBroadcaster;
 
-    public ChatController(ChatService chatService) {
+    public ChatController(ChatService chatService, ChatMessageBroadcaster chatMessageBroadcaster) {
         this.chatService = chatService;
+        this.chatMessageBroadcaster = chatMessageBroadcaster;
     }
 
     @GetMapping("/{friendId}/messages")
@@ -41,6 +43,8 @@ public class ChatController {
         @Valid @RequestBody SendChatMessageRequest request,
         @AuthenticationPrincipal ChatUserDetails currentUser
     ) {
-        return chatService.sendMessage(currentUser.user().getId(), friendId, request);
+        ChatMessageResponse message = chatService.sendMessage(currentUser.user().getId(), friendId, request);
+        chatMessageBroadcaster.broadcast(message);
+        return message;
     }
 }

@@ -32,6 +32,7 @@ build/
 ### Node / Vue ###
 frontend/node_modules/
 frontend/dist/
+uploads/
 
 ### VS Code ###
 .vscode/

@@ -5,6 +5,7 @@ import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Options;
 import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Select;
+import org.apache.ibatis.annotations.Update;
 
 @Mapper
 public interface UserMapper {
@@ -48,4 +49,7 @@ public interface UserMapper {
         """)
     @Options(useGeneratedKeys = true, keyProperty = "id")
     int insert(User user);
+
+    @Update("UPDATE users SET avatar_url = #{avatarUrl}, updated_at = CURRENT_TIMESTAMP WHERE id = #{id}")
+    int updateAvatarUrl(@Param("id") Long id, @Param("avatarUrl") String avatarUrl);
 }

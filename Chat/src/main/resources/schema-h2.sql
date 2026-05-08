@@ -44,3 +44,19 @@ CREATE TABLE IF NOT EXISTS chat_messages (
 
 CREATE INDEX IF NOT EXISTS idx_chat_messages_pair_time
 ON chat_messages (sender_id, receiver_id, created_at);
+
+CREATE TABLE IF NOT EXISTS friend_impressions (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    author_id BIGINT NOT NULL,
+    target_id BIGINT NOT NULL,
+    content VARCHAR(255) NOT NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_friend_impressions_author FOREIGN KEY (author_id) REFERENCES users(id),
+    CONSTRAINT fk_friend_impressions_target FOREIGN KEY (target_id) REFERENCES users(id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_friend_impressions_target_time
+ON friend_impressions (target_id, created_at);
+
+CREATE INDEX IF NOT EXISTS idx_friend_impressions_author_time
+ON friend_impressions (author_id, created_at);
